@@ -21,7 +21,7 @@ pipeline {
     // checkout ---> install dependencies ---> build ----> SonarQube Code Quality -----> Test  ----> Publish Artifact
     stages {
 
-        //============= Checkout ===============
+        //=============Stage 1:  Checkout  Application  repository ===============
         stage("Checkout") {
             steps {
                 load "environmentVariables.groovy"
@@ -30,53 +30,29 @@ pipeline {
                 git(url: "${env.DEV_SCM_REPOSITORY}", branch: "${env.DEV_SCM_BRANCH}", poll: true)
             }
         }
-
-        stage("Build") {
-        steps {
-                echo "Installing dependencies ......."
-                //sh 'mvn org.codehaus.mojo:exec-maven-plugin:exec'
-               sh 'npm install'
-	       echo "Building Applications ....."
-	       sh 'npm install'
-            }
+        //============= Stage 2:  Install dependencies + Build Application  ===============
+        stage("Install dependencies + Build Application ") {
+	        steps {
+	                echo "Installing dependencies ......."
+	                //sh 'mvn org.codehaus.mojo:exec-maven-plugin:exec'
+	               sh 'npm install'
+		       echo "Building Applications ....."
+		       sh 'npm install'
+	            }
 		}
-		
-		stage("SonarQube analysis") {
-			steps {
+        // ========== Stage3: SonarQube Code Quality ====================================================
+	stage("SonarQube analysis") {
+		steps {
 			// to configure sonar scanner server follow this link:
 		        // https://stackoverflow.com/questions/42763384/unknown-stage-section-withsonarqubeenv
+			// withSonarQubeDev documentation: https://www.jenkins.io/doc/pipeline/steps/sonar/
 			withSonarQubeEnv('SonarQubeDev') {
       			sh 'npm run sonar-scanner'
     			}
-    			}
-    			}
-		
-		
-		/*stage("SonarQube analysis") {
-			steps {
-				withSonarQubeEnv('SonarQubeDev') {
-      			sh 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.6.0.1398:sonar'
-    			}
-    			}
-    		
-  			}*/
-  			
-  			/*stage("SonarQube Analysis") {
-        		steps {
-        		//Defines your NodeJS environment and Tells Sonar where to run the code. Available under Manage Jenkins > Global tool Configuration
-        		//NodeJS plugin required to configure this
-            nodejs(nodeJSInstallationName: 'NodeJSLocal', configId: '') {
-                // sonar script to run in a NodeJS Module
-                script {
-                    withSonarQubeEnv('SonarQubeDev') {
-                    def scannerHome = tool 'sonarScanner';
-                    sh "${scannerHome}/bin/sonar-scanner -Dsonar.login=[my analysis token]"
-                }
-            }
-            }
-        }
-    }*/	
-		
+    		}
+    	}
+
+        // =============== Step 4: Define WaitForQualitygate should be true to go to next stage ==========
         stage("Quality Gate") {
             steps {
                 timeout(time: 1, unit: 'HOURS') {
@@ -87,21 +63,13 @@ pipeline {
                 }
             }
         }
-
+     //============= Stage 5: E2E react test =========================== 
          stage('Test') {
             steps {
-                sh './jenkins/scripts/test.sh'
+                sh 'npm run test'
             }
         }
-
-//        stage('Deliver') {
-//            steps {
-//                sh './jenkins/scripts/deliver.sh'
-//                input message: 'Finished using the web site? (Click "Proceed" to continue)'
-//                sh './jenkins/scripts/kill.sh'
-//            }
-//        }
-        
+    //========== Stage 6: Publish Artifact ====================
         stage('Pack artefacts'){
             steps {
             script {
@@ -111,8 +79,6 @@ pipeline {
             }   
             }
         }
-
-        
         stage('Archive/Upload Artefact to Nexus'){
  
                 steps{
