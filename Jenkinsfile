@@ -25,9 +25,11 @@ pipeline {
 
         stage("Build") {
         steps {
-                echo "Building.."
+                echo "Installing dependencies ......."
                 //sh 'mvn org.codehaus.mojo:exec-maven-plugin:exec'
                sh 'npm install'
+	       echo "Building Applications ....."
+	       sh 'npm install'
             }
 		}
 		
