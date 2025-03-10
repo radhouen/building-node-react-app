@@ -35,7 +35,9 @@ pipeline {
 		
 		stage("SonarQube analysis") {
 			steps {
-				withSonarQubeEnv('SonarQubeDev') {
+			// to configure sonar scanner server follow this link:
+		        // https://stackoverflow.com/questions/42763384/unknown-stage-section-withsonarqubeenv
+			withSonarQubeEnv('SonarQubeDev') {
       			sh 'npm run sonar-scanner'
     			}
     			}
